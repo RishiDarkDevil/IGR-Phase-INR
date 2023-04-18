@@ -124,7 +124,7 @@ def get_surface_trace(points,decoder,latent,resolution,mc_value,is_uniform,verbo
         import trimesh
         z  = z.astype(np.float64)
 
-        verts, faces, normals, values = measure.marching_cubes_lewiner(
+        verts, faces, normals, values = measure.marching_cubes(
             volume=z.reshape(grid['xyz'][1].shape[0], grid['xyz'][0].shape[0],
                              grid['xyz'][2].shape[0]).transpose([1, 0, 2]),
             level=mc_value,
