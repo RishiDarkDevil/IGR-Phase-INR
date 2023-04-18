@@ -39,10 +39,12 @@ class ReconstructionRunner:
 
         for epoch in range(self.startepoch, self.nepochs + 1):
 
+            # Pick a random set of points from the point cloud dataset of batch_size `self.points_batch`
             indices = torch.tensor(np.random.choice(self.data.shape[0], self.points_batch, False))
 
             cur_data = self.data[indices]
 
+            # 
             mnfld_pnts = cur_data[:, :self.d_in]
             mnfld_sigma = self.local_sigma[indices]
 
@@ -313,11 +315,11 @@ class ReconstructionRunner:
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--points_batch', type=int, default=16384, help='point batch size')
-    parser.add_argument('--nepoch', type=int, default=100000, help='number of epochs to train for')
+    parser.add_argument('--points_batch', type=int, default=10000, help='point batch size')
+    parser.add_argument('--nepoch', type=int, default=10, help='number of epochs to train for')
     parser.add_argument('--conf', type=str, default='setup.conf')
     parser.add_argument('--expname', type=str, default='single_shape')
-    parser.add_argument('--gpu', type=str, default='2', help='GPU to use [default: GPU auto]')
+    parser.add_argument('--gpu', type=str, default='auto', help='GPU to use [default: GPU auto]')
     parser.add_argument('--is_continue', default=False, action="store_true", help='continue')
     parser.add_argument('--timestamp', default='latest', type=str)
     parser.add_argument('--checkpoint', default='latest', type=str)
