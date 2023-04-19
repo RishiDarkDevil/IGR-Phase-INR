@@ -358,7 +358,7 @@ class ReconstructionRunner:
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--points_batch', type=int, default=5000, help='point batch size')
+    parser.add_argument('--points_batch', type=int, default=7000, help='point batch size')
     parser.add_argument('--nepoch', type=int, default=100000, help='number of epochs to train for')
     parser.add_argument('--conf', type=str, default='setup.conf')
     parser.add_argument('--expname', type=str, default='single_shape')
