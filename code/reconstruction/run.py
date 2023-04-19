@@ -102,6 +102,8 @@ class ReconstructionRunner:
             # Monte-Carlo Estimation of the Integral for Reconstruction Loss
             reconstruction_loss = (monte_carlo_estimand.sum(axis=1) / cur_ball_pts.shape[1]).abs().mean() 
 
+            print(reconstruction_loss.shape) #############
+
             # 6. Estimate Waals-Cahn-Hilliard (WCH) Loss
 
             print(omega_pts.dtype) ############# 
