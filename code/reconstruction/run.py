@@ -57,7 +57,7 @@ class ReconstructionRunner:
             ball_pts = cur_ball_pts.view(-1, cur_ball_pts.shape[-1]) # shape: points_batch * n_points in each ball, dimension of space = 3
 
             # 4. Sample points from omega
-            omega_pts = utils.sample_omega(self.omega_coords, self.conf.get_int('train.pts_in_omega')).cuda() # shape: n_points in omega, dimension of space = 3
+            omega_pts = utils.sample_omega(self.omega_coords, self.conf.get_int('train.pts_in_omega')).cuda().requires_grad_() # shape: n_points in omega, dimension of space = 3
 
             # Sae checkpoints and plot (Same as that in IGR)
             if epoch % self.conf.get_int('train.checkpoint_frequency') == 0:
