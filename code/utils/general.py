@@ -3,6 +3,7 @@ import os
 import numpy as np
 import torch
 import trimesh
+import math
 
 
 def mkdir_ifnotexists(directory):
@@ -61,6 +62,42 @@ def load_point_cloud_by_file_extension(file_name):
 
     return point_set
 
+# PHASE IMPLEMENTATION: START
+
+def normal_pdf(mu, sigma, points):
+    """
+    Evaluates the normal pdf with mean `mu` and std dev `sigma` at each point
+    points is a tensor of shape: n_points x dimension
+    mu is a tensor of shape: 1 x dimension
+    """
+    d = points.shape[-1]
+    eval_normal = torch.exp(-torch.sum((x - mu)**2, axis=-1) / (2*sigma**2))/((torch.sqrt(2*math.pi) * sigma)**d)
+    return eval_normal
+
+def sample_ball(center, sigma, n_points):
+    """
+    Samples `n_points` balls from a normal dist with mean as `center`
+    and std dev `sigma` from a normal distribution.
+    """
+    points = np.random.normal(center, sigma, (n_points, center.shape[0]))
+    return torch.tensor(points) # shape: n_points, dimension of center = 3 or 2
+
+def sample_omega(box_coords, n_points):
+    """
+    Samples `n_points` from the bounding box which we take as our omega
+    We draw uniform sample from this omega
+    """
+
+    min_x, max_x = np.min(np.squeeze(box_coords[:, 0])), np.max(np.squeeze(box_coords[:, 0]))
+    min_y, max_y = np.min(np.squeeze(box_coords[:, 1])), np.max(np.squeeze(box_coords[:, 1]))
+    min_z, max_z = np.min(np.squeeze(box_coords[:, 2])), np.max(np.squeeze(box_coords[:, 2]))
+
+    sample_points = [np.array([random.uniform(min_x, max_x), random.uniform(min_y, max_y),
+                        random.uniform(min_z, max_z)]) for i in range(n_points)]
+
+    return torch.tensor(np.asarray(sample_points)) # shape: n_points, dimension of omega space = 3 or 2
+
+# PHASE IMPLEMENTATION: END
 
 class LearningRateSchedule:
     def get_learning_rate(self, epoch):

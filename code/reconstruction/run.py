@@ -14,6 +14,7 @@ from model.sample import Sampler
 from model.network import gradient
 from scipy.spatial import cKDTree
 from utils.plots import plot_surface, plot_cuts
+import open3d
 
 
 class ReconstructionRunner:
@@ -37,57 +38,76 @@ class ReconstructionRunner:
 
         print("training")
 
+        # PHASE IMPLEMENTATION: START
         for epoch in range(self.startepoch, self.nepochs + 1):
 
-            # Pick a random set of points from the point cloud dataset of batch_size `self.points_batch`
+            # 1. Pick a random set of points from the point cloud dataset of batch_size `self.points_batch` to train
             indices = torch.tensor(np.random.choice(self.data.shape[0], self.points_batch, False))
 
-            cur_data = self.data[indices]
+            # 2. Get the points for the above indices
+            cur_data = self.data[indices] # shape: points_batch, dimension of space = 3 or 2
 
-            # 
-            mnfld_pnts = cur_data[:, :self.d_in]
-            mnfld_sigma = self.local_sigma[indices]
+            # 3. Sample points from the balls in the current choice of randomly chosen points from the point cloud
+            cur_ball_pts = torch.tensor(np.array([
+               utils.sample_ball(point, self.conf.get_float('train.ball_sigma'), self.conf.get_int('train.pts_per_ball')) 
+               for point in np.asarray(cur_data)
+              ])) # shape: points_batch, n_points in each ball, dimension of space = 3
 
+            # For making prediction using NN for INR model, we flatten the first axis which we revert later
+            ball_pts = cur_ball_pts.view(-1, cur_ball_pts.shape[-1]) # shape: points_batch * n_points in each ball, dimension of space = 3
+
+            # 4. Sample points from omega
+            omega_pts = utils.sample_omega(self.omega_coords, self.conf.get_int('train.pts_in_omega')) # shape: n_points in omega, dimension of space = 3
+
+            # Sae checkpoints and plot (Same as that in IGR)
             if epoch % self.conf.get_int('train.checkpoint_frequency') == 0:
                 print('saving checkpoint: ', epoch)
                 self.save_checkpoints(epoch)
                 print('plot validation epoch: ', epoch)
                 self.plot_shapes(epoch)
 
-            # change back to train mode
+            # change back to train mode (Same as that in IGR)
             self.network.train()
             self.adjust_learning_rate(epoch)
 
-            nonmnfld_pnts = self.sampler.get_points(mnfld_pnts.unsqueeze(0), mnfld_sigma.unsqueeze(0)).squeeze()
+            # 5. Estimate Reconstruction Loss
 
-            # forward pass
+            reconstruction_pred = self.network(ball_pts) # shape: (points_batch * pts_per_ball, 1)
+            # We need to divide the function value at the sampled points by the pdf using which we sampled points in the ball
+            # In our case Normal, This is done for Monte-Carlo Estimation
+            reconstruction_pred_normal = torch.tensor(np.array(
+              [utils.normal_pdf(cur_data[idx][None,:], self.conf.get_float('train.ball_sigma'), pts) for idx, pts in enumerate(cur_ball_pts)]
+              )) # shape: (points_batch, pts_per_ball, 1)
+            reconstruction_pred = reconstruction_pred.view(cur_ball_pts.shape[0], cur_ball_pts.shape[1], -1) # shape: (points_batch, pts_per_ball, 1)
+            monte_carlo_estimand = reconstruction_pred / reconstruction_pred_normal # shape: (points_batch, pts_per_ball, 1)
+            # Monte-Carlo Estimation of the Integral for Reconstruction Loss
+            reconstruction_loss = (monte_carlo_estimand.sum(axis=1) / cur_ball_pts.shape[1]).abs().mean() 
 
-            mnfld_pred = self.network(mnfld_pnts)
-            nonmnfld_pred = self.network(nonmnfld_pnts)
+            # 6. Estimate Waals-Cahn-Hilliard (WCH) Loss
 
-            # compute grad
+            WCH_pred = self.network(omega_pts) # shape: (n_points in omega, 1)
+            grad = gradient(omega_pts, WCH_pred)
+            W_u = WCH_pred ** 2 - 2 * torch.abs(WCH_pred) + 1
+            # Monte-Carlo Estimation of the Integral for WCH Loss
+            # Here we divide by the Uniform pdf which is same as simply multiplying by omega's volume
+            WCH_loss = self.omega_vol * (self.epsilon * grad.norm(2, dim=-1) ** 2 + W_u).mean(dim=0)
 
-            mnfld_grad = gradient(mnfld_pnts, mnfld_pred)
-            nonmnfld_grad = gradient(nonmnfld_pnts, nonmnfld_pred)
+            # The final loss
+            loss = self.lmbda * reconstruction_loss + WCH_loss
 
-            # manifold loss
+            # 7. Estimate Additional Normal Loss
 
-            mnfld_loss = (mnfld_pred.abs()).mean()
+            if self.mu > 0.0:
+                u_x = self.network(cur_data[:, :self.d_in]).view(-1, 1) # shape: points_batch, 1
+                grad_w_x = (self.epsilon ** 0.5) * u_x # shape: points_batch, 1
+                if self.has_normals:
+                    normals = cur_data[:, -self.d_in:] # shape: points_batch, dimension = 3 or 2
+                    normals_loss = (normals - grad_w_x).norm(1, dim=1).mean()
+                else:
+                    normals_loss = (1.0 - grad_w_x.norm(2, dim=1)).view(-1, 1).norm(2, dim=1).mean()
 
-            # eikonal loss
-
-            grad_loss = ((nonmnfld_grad.norm(2, dim=-1) - 1) ** 2).mean()
-
-            loss = mnfld_loss + self.grad_lambda * grad_loss
-
-            # normals loss
-
-            if self.with_normals:
-                normals = cur_data[:, -self.d_in:]
-                normals_loss = ((mnfld_grad - normals).abs()).norm(2, dim=1).mean()
-                loss = loss + self.normals_lambda * normals_loss
-            else:
-                normals_loss = torch.zeros(1)
+                # The final loss term is the sum of all the above three losses
+                loss += self.mu * normals_loss
 
             # back propagation
 
@@ -98,10 +118,12 @@ class ReconstructionRunner:
             self.optimizer.step()
 
             if epoch % self.conf.get_int('train.status_frequency') == 0:
-                print('Train Epoch: [{}/{} ({:.0f}%)]\tTrain Loss: {:.6f}\tManifold loss: {:.6f}'
-                    '\tGrad loss: {:.6f}\tNormals Loss: {:.6f}'.format(
+                print('Train Epoch: [{}/{} ({:.0f}%)]\tTrain Loss: {:.6f}\tReconstruction loss: {:.6f}'
+                    '\tWCH loss: {:.6f}\tNormals Loss: {:.6f}'.format(
                     epoch, self.nepochs, 100. * epoch / self.nepochs,
-                    loss.item(), mnfld_loss.item(), grad_loss.item(), normals_loss.item()))
+                    loss.item(), reconstruction_loss.item(), WCH_loss.item(), normals_loss.item()))
+
+        # PHASE IMPLEMENTATION: END
 
     def plot_shapes(self, epoch, path=None, with_cuts=False):
         # plot network validation shapes
@@ -181,6 +203,27 @@ class ReconstructionRunner:
         self.input_file = self.conf.get_string('train.input_path')
         self.data = utils.load_point_cloud_by_file_extension(self.input_file)
 
+        # PHASE IMPLEMENTATION: START
+
+        # 1. We normalize the point set (`self.data`) to have unit max norm
+        self.data /= max(np.linalg.norm(self.data, axis=1))
+
+        # 2. Omega is taken as the Axis Aligned Bounding Box for the points in the point cloud, scaled 1.5 
+        # for 3D and scaled 2 for 2D.
+        points = open3d.utility.Vector3dVector(np.array(self.data))
+        bounding_box = open3d.geometry.AxisAlignedBoundingBox().create_from_points(points)
+        bounding_box = bounding_box.scale(self.conf.get_float('train.bounding_box_scale'), bounding_box.get_center())
+        self.omega_coords = np.asarray(bounding_box.get_box_points()) # We need to keep the coords of the bounding box for characterizing omega
+        self.omega_vol = bounding_box.volume() # We need the volume of omega
+
+        self.epsilon = self.conf.get_float('network.loss.epsilon')
+        self.lmbda = self.conf.get_float('network.loss.lambda')
+        self.mu = self.conf.get_float('network.loss.mu')
+
+        self.has_normals = self.conf.get_bool('network.has_normals') and (self.data.shape[-1] >= 6)
+
+        # PHASE IMPLEMENTATION: END
+
         sigma_set = []
         ptree = cKDTree(self.data)
 
@@ -226,9 +269,6 @@ class ReconstructionRunner:
                                                                                                  self.local_sigma)
         self.grad_lambda = self.conf.get_float('network.loss.lambda')
         self.normals_lambda = self.conf.get_float('network.loss.normals_lambda')
-
-        # use normals if data has  normals and normals_lambda is positive
-        self.with_normals = self.normals_lambda > 0 and self.data.shape[-1] >= 6
 
         self.d_in = self.conf.get_int('train.d_in')
 
