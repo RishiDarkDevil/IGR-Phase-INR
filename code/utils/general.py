@@ -79,7 +79,7 @@ def sample_ball(center, sigma, n_points):
     Samples `n_points` balls from a normal dist with mean as `center`
     and std dev `sigma` from a normal distribution.
     """
-    points = np.random.normal(center, sigma, (n_points, center.shape[0]))
+    points = np.random.normal(center.cpu().numpy(), sigma, (n_points, center.shape[0]))
     return torch.tensor(points) # shape: n_points, dimension of center = 3 or 2
 
 def sample_omega(box_coords, n_points):
