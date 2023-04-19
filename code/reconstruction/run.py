@@ -106,7 +106,7 @@ class ReconstructionRunner:
 
             print(omega_pts.dtype) ############# 
             print(self.network) ############# 
-            print(self.network.parameters()) #############            
+            print(list(self.network.parameters())) #############            
 
             WCH_pred = self.network(omega_pts) # shape: (n_points in omega, 1)
             grad = gradient(omega_pts, WCH_pred)
