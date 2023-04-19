@@ -90,7 +90,7 @@ class ReconstructionRunner:
             # In our case Normal, This is done for Monte-Carlo Estimation
             reconstruction_pred_normal = torch.stack(
               [utils.normal_pdf(cur_data[idx][None,:], self.conf.get_float('train.ball_sigma'), pts) for idx, pts in enumerate(cur_ball_pts)]
-              ).cuda() # shape: (points_batch, pts_per_ball, 1)
+              )[:,:,None].cuda() # shape: (points_batch, pts_per_ball, 1)
             
             print(reconstruction_pred_normal.shape) #############
 
