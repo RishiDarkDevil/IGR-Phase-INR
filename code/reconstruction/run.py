@@ -116,6 +116,7 @@ class ReconstructionRunner:
             print(grad.shape) #############
 
             W_u = WCH_pred ** 2 - 2 * torch.abs(WCH_pred) + 1
+            W_u = torch.squeeze(W_u)
             # Monte-Carlo Estimation of the Integral for WCH Loss
             # Here we divide by the Uniform pdf which is same as simply multiplying by omega's volume
             WCH_loss = self.omega_vol * (self.epsilon * grad.norm(2, dim=-1) ** 2 + W_u).mean(dim=0)
