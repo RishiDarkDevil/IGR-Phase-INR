@@ -48,10 +48,10 @@ class ReconstructionRunner:
             cur_data = self.data[indices] # shape: points_batch, dimension of space = 3 or 2
 
             # 3. Sample points from the balls in the current choice of randomly chosen points from the point cloud
-            cur_ball_pts = torch.tensor(np.array([
+            cur_ball_pts = torch.tensor([
                utils.sample_ball(point, self.conf.get_float('train.ball_sigma'), self.conf.get_int('train.pts_per_ball')) 
                for point in cur_data
-              ])) # shape: points_batch, n_points in each ball, dimension of space = 3
+              ]) # shape: points_batch, n_points in each ball, dimension of space = 3
 
             # For making prediction using NN for INR model, we flatten the first axis which we revert later
             ball_pts = cur_ball_pts.view(-1, cur_ball_pts.shape[-1]) # shape: points_batch * n_points in each ball, dimension of space = 3
