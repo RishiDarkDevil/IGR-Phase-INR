@@ -92,10 +92,10 @@ def sample_omega(box_coords, n_points):
     min_y, max_y = np.min(np.squeeze(box_coords[:, 1])), np.max(np.squeeze(box_coords[:, 1]))
     min_z, max_z = np.min(np.squeeze(box_coords[:, 2])), np.max(np.squeeze(box_coords[:, 2]))
 
-    sample_points = [np.array([random.uniform(min_x, max_x), random.uniform(min_y, max_y),
-                        random.uniform(min_z, max_z)]) for i in range(n_points)]
+    sample_points = np.asarray([np.array([np.random.uniform(min_x, max_x), np.random.uniform(min_y, max_y),
+                            np.random.uniform(min_z, max_z)]) for _ in range(n_points)])
 
-    return torch.tensor(np.asarray(sample_points)) # shape: n_points, dimension of omega space = 3 or 2
+    return torch.tensor(sample_points) # shape: n_points, dimension of omega space = 3 or 2
 
 # PHASE IMPLEMENTATION: END
 
