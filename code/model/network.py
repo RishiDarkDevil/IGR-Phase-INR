@@ -15,6 +15,28 @@ def gradient(inputs, outputs):
         only_inputs=True)[0][:, -3:]
     return points_grad
 
+# PHASE IMPLEMENTATION: START
+
+class FourierFeatureMapping(nn.Module):
+    """
+    Fourier Feature Mapping
+    https://github.com/tancik/fourier-feature-networks
+    """
+    def __init__(
+        self,
+        d_in, 
+        d_out,
+        scale
+        ):
+        super().__init__()
+        # scaled standard gaussian
+        self.B = scale * torch.randn(d_in, d_out) # shape: d_in, d_out
+        self.B.requires_grad = False
+
+    def forward(self, x):
+        x_proj = (2.0 * np.pi * x) @ self.B # Projecting x
+        # returning Fourier Features
+        return torch.concatenate([torch.sin(x_proj), torch.cos(x_proj)], axis=-1)
 
 class ImplicitNet(nn.Module):
     def __init__(
@@ -24,11 +46,20 @@ class ImplicitNet(nn.Module):
         skip_in=(),
         geometric_init=True,
         radius_init=1,
-        beta=100
+        beta=100,
+        use_FFM=False,
+        scale = 1.0
     ):
         super().__init__()
 
-        dims = [d_in] + dims + [1]
+        self.use_FFM = use_FFM
+        self.scale = scale
+
+        if use_FFM:
+            self.FFM = FourierFeatureMapping(d_in, dims[0]//2, scale)
+            dims = [dims[0]] + dims + [1]
+        else:
+            dims = [d_in] + dims + [1]
 
         self.num_layers = len(dims)
         self.skip_in = skip_in
@@ -67,6 +98,9 @@ class ImplicitNet(nn.Module):
 
         x = input
 
+        if self.use_FFM:
+            x = self.FFM(x)
+
         for layer in range(0, self.num_layers - 1):
 
             lin = getattr(self, "lin" + str(layer))
@@ -80,3 +114,4 @@ class ImplicitNet(nn.Module):
                 x = self.activation(x)
 
         return x
+# PHASE IMPLEMENTATION: END
