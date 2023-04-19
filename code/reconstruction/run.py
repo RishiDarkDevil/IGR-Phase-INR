@@ -68,7 +68,7 @@ class ReconstructionRunner:
             print(omega_pts.shape) #############
 
             # Sae checkpoints and plot (Same as that in IGR)
-            if epoch % self.conf.get_int('train.checkpoint_frequency') == 0:
+            if (epoch+1) % self.conf.get_int('train.checkpoint_frequency') == 0:
                 print('saving checkpoint: ', epoch)
                 self.save_checkpoints(epoch)
                 print('plot validation epoch: ', epoch)
