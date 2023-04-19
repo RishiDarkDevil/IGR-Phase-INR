@@ -71,7 +71,7 @@ def normal_pdf(mu, sigma, points):
     mu is a tensor of shape: 1 x dimension
     """
     d = points.shape[-1]
-    eval_normal = torch.exp(-torch.sum((points - mu)**2, axis=-1) / (2*sigma**2))/((torch.sqrt(2*math.pi) * sigma)**d)
+    eval_normal = torch.exp(-torch.sum((points - mu)**2, axis=-1) / (2*sigma**2))/((math.sqrt(2*math.pi) * sigma)**d)
     return eval_normal
 
 def sample_ball(center, sigma, n_points):
