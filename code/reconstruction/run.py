@@ -51,13 +51,13 @@ class ReconstructionRunner:
             cur_ball_pts = torch.tensor([
                utils.sample_ball(point, self.conf.get_float('train.ball_sigma'), self.conf.get_int('train.pts_per_ball')) 
                for point in cur_data
-              ]) # shape: points_batch, n_points in each ball, dimension of space = 3
+              ]).cuda() # shape: points_batch, n_points in each ball, dimension of space = 3
 
             # For making prediction using NN for INR model, we flatten the first axis which we revert later
             ball_pts = cur_ball_pts.view(-1, cur_ball_pts.shape[-1]) # shape: points_batch * n_points in each ball, dimension of space = 3
 
             # 4. Sample points from omega
-            omega_pts = utils.sample_omega(self.omega_coords, self.conf.get_int('train.pts_in_omega')) # shape: n_points in omega, dimension of space = 3
+            omega_pts = utils.sample_omega(self.omega_coords, self.conf.get_int('train.pts_in_omega')).cuda() # shape: n_points in omega, dimension of space = 3
 
             # Sae checkpoints and plot (Same as that in IGR)
             if epoch % self.conf.get_int('train.checkpoint_frequency') == 0:
@@ -75,9 +75,9 @@ class ReconstructionRunner:
             reconstruction_pred = self.network(ball_pts) # shape: (points_batch * pts_per_ball, 1)
             # We need to divide the function value at the sampled points by the pdf using which we sampled points in the ball
             # In our case Normal, This is done for Monte-Carlo Estimation
-            reconstruction_pred_normal = torch.tensor(np.array(
+            reconstruction_pred_normal = torch.tensor(
               [utils.normal_pdf(cur_data[idx][None,:], self.conf.get_float('train.ball_sigma'), pts) for idx, pts in enumerate(cur_ball_pts)]
-              )) # shape: (points_batch, pts_per_ball, 1)
+              ).cuda() # shape: (points_batch, pts_per_ball, 1)
             reconstruction_pred = reconstruction_pred.view(cur_ball_pts.shape[0], cur_ball_pts.shape[1], -1) # shape: (points_batch, pts_per_ball, 1)
             monte_carlo_estimand = reconstruction_pred / reconstruction_pred_normal # shape: (points_batch, pts_per_ball, 1)
             # Monte-Carlo Estimation of the Integral for Reconstruction Loss
