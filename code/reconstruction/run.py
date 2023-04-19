@@ -95,8 +95,8 @@ class ReconstructionRunner:
             # Here we divide by the Uniform pdf which is same as simply multiplying by omega's volume
             WCH_loss = self.omega_vol * (self.epsilon * grad.norm(2, dim=-1) ** 2 + W_u).mean(dim=0)
 
-            # The final loss
-            loss = self.lmbda * reconstruction_loss + WCH_loss
+            # The final loss (without normal loss) - Scaling the loss functions so that they are more or less in the same range
+            loss = self.lmbda * reconstruction_loss / ((4*math.pi*self.conf.get_float('train.ball_sigma')**3)/3) + WCH_loss / self.omega_vol
 
             # 7. Estimate Additional Normal Loss
 
@@ -359,7 +359,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--points_batch', type=int, default=7000, help='point batch size')
-    parser.add_argument('--nepoch', type=int, default=100000, help='number of epochs to train for')
+    parser.add_argument('--nepoch', type=int, default=10000, help='number of epochs to train for')
     parser.add_argument('--conf', type=str, default='setup.conf')
     parser.add_argument('--expname', type=str, default='single_shape')
     parser.add_argument('--gpu', type=str, default='auto', help='GPU to use [default: GPU auto]')
