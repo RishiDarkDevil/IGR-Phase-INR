@@ -63,7 +63,7 @@ class ReconstructionRunner:
             print(ball_pts.shape) #############
 
             # 4. Sample points from omega
-            omega_pts = utils.sample_omega(self.omega_coords, self.conf.get_int('train.pts_in_omega')).cuda().requires_grad_() # shape: n_points in omega, dimension of space = 3
+            omega_pts = utils.sample_omega(self.omega_coords, self.conf.get_int('train.pts_in_omega')).float().cuda().requires_grad_() # shape: n_points in omega, dimension of space = 3
 
             print(omega_pts.shape) #############
 
