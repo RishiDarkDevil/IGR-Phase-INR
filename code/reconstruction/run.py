@@ -15,6 +15,7 @@ from model.network import gradient
 from scipy.spatial import cKDTree
 from utils.plots import plot_surface, plot_cuts
 import open3d
+import math
 
 
 class ReconstructionRunner:
