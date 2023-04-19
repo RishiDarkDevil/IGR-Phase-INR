@@ -121,6 +121,8 @@ class ReconstructionRunner:
             # The final loss
             loss = self.lmbda * reconstruction_loss + WCH_loss
 
+            print(loss) ############# 
+
             # 7. Estimate Additional Normal Loss
 
             if self.mu > 0.0:
