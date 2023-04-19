@@ -47,25 +47,17 @@ class ReconstructionRunner:
             # 2. Get the points for the above indices
             cur_data = self.data[indices] # shape: points_batch, dimension of space = 3 or 2
 
-            print(cur_data.shape) #############
-
             # 3. Sample points from the balls in the current choice of randomly chosen points from the point cloud
             cur_ball_pts = torch.stack([
                utils.sample_ball(point, self.conf.get_float('train.ball_sigma'), self.conf.get_int('train.pts_per_ball')) 
                for point in cur_data
               ]).cuda() # shape: points_batch, n_points in each ball, dimension of space = 3
 
-            print(cur_ball_pts.shape) #############
-
             # For making prediction using NN for INR model, we flatten the first axis which we revert later
             ball_pts = cur_ball_pts.view(-1, cur_ball_pts.shape[-1]) # shape: points_batch * n_points in each ball, dimension of space = 3
 
-            print(ball_pts.shape) #############
-
             # 4. Sample points from omega
             omega_pts = utils.sample_omega(self.omega_coords, self.conf.get_int('train.pts_in_omega')).float().cuda().requires_grad_() # shape: n_points in omega, dimension of space = 3
-
-            print(omega_pts.shape) #############
 
             # Sae checkpoints and plot (Same as that in IGR)
             ####### Changed to epoch+1
@@ -82,38 +74,20 @@ class ReconstructionRunner:
             # 5. Estimate Reconstruction Loss
 
             reconstruction_pred = self.network(ball_pts) # shape: (points_batch * pts_per_ball, 1)
-
-
-            print(reconstruction_pred.shape) #############
-
             # We need to divide the function value at the sampled points by the pdf using which we sampled points in the ball
             # In our case Normal, This is done for Monte-Carlo Estimation
             reconstruction_pred_normal = torch.stack(
               [utils.normal_pdf(cur_data[idx][None,:], self.conf.get_float('train.ball_sigma'), pts) for idx, pts in enumerate(cur_ball_pts)]
               )[:,:,None].cuda() # shape: (points_batch, pts_per_ball, 1)
-            
-            print(reconstruction_pred_normal.shape) #############
-
             reconstruction_pred = reconstruction_pred.view(cur_ball_pts.shape[0], cur_ball_pts.shape[1], -1) # shape: (points_batch, pts_per_ball, 1)
-            
-            print(reconstruction_pred.shape) #############
-
             monte_carlo_estimand = reconstruction_pred / reconstruction_pred_normal # shape: (points_batch, pts_per_ball, 1)
             # Monte-Carlo Estimation of the Integral for Reconstruction Loss
             reconstruction_loss = (monte_carlo_estimand.sum(axis=1) / cur_ball_pts.shape[1]).abs().mean() 
 
-            print(reconstruction_loss.shape) #############
-
-            # 6. Estimate Waals-Cahn-Hilliard (WCH) Loss
-
-            print(omega_pts.dtype) ############# 
-            print(self.network) ############# 
-            print(list(self.network.parameters())[0].dtype) #############            
+            # 6. Estimate Waals-Cahn-Hilliard (WCH) Loss          
 
             WCH_pred = self.network(omega_pts) # shape: (n_points in omega, 1)
             grad = gradient(omega_pts, WCH_pred)
-
-            print(grad.shape) #############
 
             W_u = WCH_pred ** 2 - 2 * torch.abs(WCH_pred) + 1
             W_u = torch.squeeze(W_u)
@@ -124,8 +98,6 @@ class ReconstructionRunner:
             # The final loss
             loss = self.lmbda * reconstruction_loss + WCH_loss
 
-            print(loss) ############# 
-
             # 7. Estimate Additional Normal Loss
 
             if self.mu > 0.0:
@@ -135,7 +107,7 @@ class ReconstructionRunner:
                     normals = cur_data[:, -self.d_in:] # shape: points_batch, dimension = 3 or 2
                     normals_loss = (normals - grad_w_x).norm(1, dim=1).mean()
                 else:
-                    normals_loss = (1.0 - grad_w_x.norm(2, dim=1)).view(-1, 1).norm(2, dim=1).mean()
+                    normals_loss = ((1.0 - grad_w_x.norm(2, dim=1))**2).mean()
 
                 # The final loss term is the sum of all the above three losses
                 loss += self.mu * normals_loss
