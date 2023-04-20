@@ -98,7 +98,7 @@ def sample_omega(box_coords, n_points):
 
     return torch.tensor(sample_points) # shape: n_points, dimension of omega space = 3 or 2
 
-def chamfer_dist(mesh_x, mesh_y, sample_count=10000000):
+def chamfer_dist(mesh_x, mesh_y, sample_count=100000):
     """
     Calculates the double-sided Chamfer Distance between `mesh_x` and `mesh_y`
     mesh_x: trimesh.Trimesh
