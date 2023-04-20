@@ -1,4 +1,4 @@
-# IGR: Implicit Geometric Regularization for Learning Shapes
+# PHASE-based Implicit Neural Representation
 <p align="center">
   <img src="IGR.png"/>
 </p>
