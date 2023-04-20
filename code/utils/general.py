@@ -104,26 +104,27 @@ def chamfer_dist(mesh_x, mesh_y, sample_count=10000000):
     mesh_x: trimesh.Trimesh
     mesh_y: trimesh.Trimesh
     """
+    print('Converting Meshes to Point Clouds...')
     # sample both the meshes densely
-    points_x, _ = np.array(trimesh.sample.sample_surface_even(mesh_x, sample_count))
-    points_y, _ = np.array(trimesh.sample.sample_surface_even(mesh_y, sample_count))
+    points_x = np.array(trimesh.sample.sample_surface_even(mesh_x, sample_count)[0])
+    points_y = np.array(trimesh.sample.sample_surface_even(mesh_y, sample_count)[0])
 
+    print('Creating Search Tree...')
     # Index the points for nearest neighbour retrieval
     points_x_tree = cKDTree(points_x)
     points_y_tree = cKDTree(points_y)
 
+    print('Calculating one-sided Chamfer Distance from 1st to 2nd mesh...')
     # X->Y Chamfer Distance
-    chamfer_x_y = 0
-    for point in points_x:
-        chamfer_x_y += points_y_tree.query(point, k=1)[0]
-    chamfer_x_y /= points_x.shape[0]
+    chamfer_x_y = points_y_tree.query(points_x, k=1)[0]
+    chamfer_x_y = np.mean(chamfer_x_y)
 
+    print('Calculating one-sided Chamfer Distance from 2nd to 1st mesh...')
     # Y->X Chamfer Distance
-    chamfer_y_x = 0
-    for point in points_y:
-        chamfer_y_x += points_x_tree.query(point, k=1)[0]
-    chamfer_y_x /= points_y.shape[0]
+    chamfer_y_x = points_y_tree.query(points_y, k=1)[0]
+    chamfer_y_x = np.mean(chamfer_y_x)
 
+    print('Calculating double-sided Chamfer Distance')
     # Double-Sided Chamfer Distance
     chamfer_dist = (chamfer_x_y + chamfer_y_x) / 2
 
