@@ -26,17 +26,14 @@ class FourierFeatureMapping(nn.Module):
         self,
         d_in, 
         d_out,
-        scale
+        k
         ):
         super().__init__()
-        # scaled standard gaussian
-        self.B = scale * torch.randn(d_in, d_out).cuda() # shape: d_in, d_out
-        self.B.requires_grad = False
 
     def forward(self, x):
-        x_proj = (2.0 * np.pi * x) @ self.B # Projecting x
+        x_proj = torch.concatenate([(2.0**i) * np.pi * x for i in range(1, k+1)], axis=-1) # Projecting x
         # returning Fourier Features
-        return torch.concatenate([torch.sin(x_proj), torch.cos(x_proj)], axis=-1)
+        return torch.concatenate([torch.cos(x_proj), torch.sin(x_proj)], axis=-1)
 
 class ImplicitNet(nn.Module):
     def __init__(
@@ -48,7 +45,7 @@ class ImplicitNet(nn.Module):
         radius_init=1,
         beta=100,
         use_FFM=False,
-        scale = 1.0
+        k = 6
     ):
         super().__init__()
 
@@ -56,8 +53,8 @@ class ImplicitNet(nn.Module):
         self.scale = scale
 
         if use_FFM:
-            self.FFM = FourierFeatureMapping(d_in, dims[0]//2, scale)
-            dims = dims + [1]
+            self.FFM = FourierFeatureMapping(d_in, dims[0]//2, scale, k)
+            dims = [2*k*d_in] + dims + [1]
         else:
             dims = [d_in] + dims + [1]
 

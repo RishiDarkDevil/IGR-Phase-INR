@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 import torch
+from scipy.spatial import cKDTree
 import trimesh
 import math
 
@@ -96,6 +97,38 @@ def sample_omega(box_coords, n_points):
                             np.random.uniform(min_z, max_z)]) for _ in range(n_points)])
 
     return torch.tensor(sample_points) # shape: n_points, dimension of omega space = 3 or 2
+
+def chamfer_dist(mesh_x, mesh_y, sample_count=10000000):
+    """
+    Calculates the double-sided Chamfer Distance between `mesh_x` and `mesh_y`
+    mesh_x: trimesh.Trimesh
+    mesh_y: trimesh.Trimesh
+    """
+    # sample both the meshes densely
+    points_x, _ = np.array(trimesh.sample.sample_surface_even(mesh_x, sample_count))
+    points_y, _ = np.array(trimesh.sample.sample_surface_even(mesh_y, sample_count))
+
+    # Index the points for nearest neighbour retrieval
+    points_x_tree = cKDTree(points_x)
+    points_y_tree = cKDTree(points_y)
+
+    # X->Y Chamfer Distance
+    chamfer_x_y = 0
+    for point in points_x:
+        chamfer_x_y += points_y_tree.query(point, k=1)[0]
+    chamfer_x_y /= points_x.shape[0]
+
+    # Y->X Chamfer Distance
+    chamfer_y_x = 0
+    for point in points_y:
+        chamfer_y_x += points_x_tree.query(point, k=1)[0]
+    chamfer_y_x /= points_y.shape[0]
+
+    # Double-Sided Chamfer Distance
+    chamfer_dist = (chamfer_x_y + chamfer_y_x) / 2
+
+    return chamfer_dist
+
 
 # PHASE IMPLEMENTATION: END
 
