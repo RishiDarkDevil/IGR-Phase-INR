@@ -60,7 +60,7 @@ class ReconstructionRunner:
             ball_pts.requires_grad = True
 
             # 4. Sample points from omega
-            omega_pts = utils.sample_omega(self.omega_coords, self.conf.get_int('train.pts_per_ball') * cur_data.shape[0]).float().cuda().requires_grad_() # shape: n_points in omega, dimension of space = 3
+            omega_pts = utils.sample_omega(self.omega_coords, self.conf.get_int('train.pts_in_omega')).float().cuda().requires_grad_() # shape: n_points in omega, dimension of space = 3
 
             # Same checkpoints and plot (Same as that in IGR)
             # Changed to epoch+1
