@@ -49,10 +49,12 @@ class ReconstructionRunner:
             cur_data = self.data[indices] # shape: points_batch, dimension of space = 3 or 2
 
             # 3. Sample points from the balls in the current choice of randomly chosen points from the point cloud
-            cur_ball_pts = torch.stack([
-               utils.sample_ball(point, self.conf.get_float('train.ball_sigma'), self.conf.get_int('train.pts_per_ball')) 
-               for point in cur_data
-              ]).cuda() # shape: points_batch, n_points in each ball, dimension of space = 3
+            with torch.no_grad():
+                cur_ball_pts = torch.stack([
+                   utils.sample_ball(point, self.conf.get_float('train.ball_sigma'), self.conf.get_int('train.pts_per_ball')) 
+                   for point in cur_data
+                  ]).cuda() # shape: points_batch, n_points in each ball, dimension of space = 3
+            cur_ball_pts.requires_grad = True
 
             # For making prediction using NN for INR model, we flatten the first axis which we revert later
             ball_pts = cur_ball_pts.view(-1, cur_ball_pts.shape[-1]) # shape: points_batch * n_points in each ball, dimension of space = 3
@@ -75,19 +77,23 @@ class ReconstructionRunner:
             # 5. Estimate Reconstruction Loss
 
             reconstruction_pred = self.network(ball_pts) # shape: (points_batch * pts_per_ball, 1)
+            print('reconstruction', reconstruction_pred) #######
             # We need to divide the function value at the sampled points by the pdf using which we sampled points in the ball
             # In our case Normal, This is done for Monte-Carlo Estimation
-            reconstruction_pred_normal = torch.stack(
-              [utils.normal_pdf(cur_data[idx][None,:], self.conf.get_float('train.ball_sigma'), pts) for idx, pts in enumerate(cur_ball_pts)]
-              )[:,:,None].cuda() # shape: (points_batch, pts_per_ball, 1)
+            with torch.no_grad():
+                reconstruction_pred_normal = torch.stack(
+                  [utils.normal_pdf(cur_data[idx][None,:], self.conf.get_float('train.ball_sigma'), pts) for idx, pts in enumerate(cur_ball_pts)]
+                  )[:,:,None].cuda() # shape: (points_batch, pts_per_ball, 1)
+            reconstruction_pred_normal.requires_grad = False
             reconstruction_pred = reconstruction_pred.view(cur_ball_pts.shape[0], cur_ball_pts.shape[1], -1) # shape: (points_batch, pts_per_ball, 1)
             monte_carlo_estimand = reconstruction_pred / reconstruction_pred_normal # shape: (points_batch, pts_per_ball, 1)
             # Monte-Carlo Estimation of the Integral for Reconstruction Loss
-            reconstruction_loss = (monte_carlo_estimand.sum(axis=1) / cur_ball_pts.shape[1]).abs().mean() 
+            reconstruction_loss = (monte_carlo_estimand.sum(axis=1) / cur_ball_pts.shape[1]).abs().mean() # prevents loss to become extremely small
 
             # 6. Estimate Waals-Cahn-Hilliard (WCH) Loss          
 
             WCH_pred = self.network(omega_pts) # shape: (n_points in omega, 1)
+            print('WCH', WCH_pred) ########
             grad = gradient(omega_pts, WCH_pred)
 
             W_u = WCH_pred ** 2 - 2 * torch.abs(WCH_pred) + 1
@@ -97,12 +103,13 @@ class ReconstructionRunner:
             WCH_loss = self.omega_vol * (self.epsilon * grad.norm(2, dim=-1) ** 2 + W_u).mean(dim=0)
 
             # The final loss (without normal loss) - Scaling the loss functions so that they are more or less in the same range
-            loss = self.lmbda * reconstruction_loss / ((4*math.pi*self.conf.get_float('train.ball_sigma')**3)/3) + WCH_loss / self.omega_vol
+            loss = self.lmbda * reconstruction_loss + WCH_loss
 
             # 7. Estimate Additional Normal Loss
 
             if self.mu > 0.0:
                 u_x = self.network(cur_data[:, :self.d_in]).view(-1, 1) # shape: points_batch, 1
+                print('u_x', u_x) #########
                 grad_w_x = (self.epsilon ** 0.5) * u_x # shape: points_batch, 1
                 if self.has_normals:
                     normals = cur_data[:, -self.d_in:] # shape: points_batch, dimension = 3 or 2
@@ -112,6 +119,8 @@ class ReconstructionRunner:
 
                 # The final loss term is the sum of all the above three losses
                 loss += self.mu * normals_loss
+
+            loss *= 1e2 # scaling the loss to prevent it getting too small
 
             # back propagation
 

@@ -30,7 +30,7 @@ class FourierFeatureMapping(nn.Module):
         ):
         super().__init__()
         # scaled standard gaussian
-        self.B = scale * torch.randn(d_in, d_out) # shape: d_in, d_out
+        self.B = scale * torch.randn(d_in, d_out).cuda() # shape: d_in, d_out
         self.B.requires_grad = False
 
     def forward(self, x):
@@ -57,7 +57,7 @@ class ImplicitNet(nn.Module):
 
         if use_FFM:
             self.FFM = FourierFeatureMapping(d_in, dims[0]//2, scale)
-            dims = [dims[0]] + dims + [1]
+            dims = dims + [1]
         else:
             dims = [d_in] + dims + [1]
 
