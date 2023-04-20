@@ -83,7 +83,7 @@ class ReconstructionRunner:
             with torch.no_grad():
                 reconstruction_pred_normal = torch.stack(
                   [utils.normal_pdf(cur_data[idx][None,:], self.conf.get_float('train.ball_sigma'), pts) for idx, pts in enumerate(cur_ball_pts)]
-                  )[:,:,None].cuda() # shape: (points_batch, pts_per_ball, 1)
+                  ).cuda() # shape: (points_batch, pts_per_ball, 1)
             reconstruction_pred_normal.requires_grad = False
             reconstruction_pred = reconstruction_pred.view(cur_ball_pts.shape[0], cur_ball_pts.shape[1], -1) # shape: (points_batch, pts_per_ball, 1)
             monte_carlo_estimand = reconstruction_pred / reconstruction_pred_normal # shape: (points_batch, pts_per_ball, 1)
