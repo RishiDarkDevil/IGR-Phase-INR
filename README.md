@@ -1,6 +1,6 @@
 # PHASE-based Implicit Neural Representation
 <p align="center">
-  <img src="IGR.png"/>
+  <img src="uni-sdf.png"/>
 </p>
 
 This repository contains an unofficial implementation to the paper: "Phase Transitions, Distance Functions, and Implicit Neural Representations". It is implemented on top of the [IGR Codebase](https://github.com/amosgropp/IGR).
@@ -23,7 +23,7 @@ pip install numpy scipy pyhocon plotly scikit-image trimesh GPUtil open3d
 
 ### Surface reconstruction
 <p align="center">
-  <img src="recon3D.png"/>
+  <img src="PHASE-recons.png"/>
 </p>
 
 PHASE-INR can be used to reconstruct a single surface given a point cloud with or without normal data. Adjust `reconstruction/setup.json` to the
