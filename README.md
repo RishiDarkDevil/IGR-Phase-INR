@@ -60,7 +60,7 @@ Here, is a test run of this inside this [Colab Notebook](https://colab.research.
 
 ### Preliminary Results
 
-Because of computational constraints and availability of only the Colab Enviornment, I could only test it for smaller training duration and network size. (For more details check the [Implementation Paper](https://www.researchgate.net/publication/370214904_Implicit_Neural_Representation_with_PHASE_Implementation)). Below are some preliminary results after just 1000 epochs each for the vanilla PHASE and PHASE with Fourier Feature implementation,
+Because of computational constraints and availability of only the Colab Enviornment, I could only test it for smaller training duration and network size. (For more details check the [Implementation Paper](https://www.researchgate.net/publication/370214904_Implicit_Neural_Representation_with_PHASE_Implementation)). Below are some preliminary results after just 1000 epochs each for the vanilla PHASE (left), PHASE with Fourier Feature (right) implementation and target mesh (middle)
 
 <p align="center">
   <img src="prelim-res.png"/>
