@@ -58,6 +58,14 @@ Chamfer Distance is implemented in `utils/general.py` and can be called to evalu
 
 Here, is a test run of this inside this [Colab Notebook](https://colab.research.google.com/drive/1I820pN7U0s4oanUC5TIrD7L7sijchl1N?usp=sharing)
 
+### Preliminary Results
+
+Because of computational constraints and availability of only the Colab Enviornment, I could only test it for smaller training duration and network size. (For more details check the [Implementation Paper](https://www.researchgate.net/publication/370214904_Implicit_Neural_Representation_with_PHASE_Implementation)). Below are some preliminary results after just 1000 epochs each for the vanilla PHASE and PHASE with Fourier Feature implementation,
+
+<p align="center">
+  <img src="prelim-res.png"/>
+</p>
+
 ## Citation
 For citation of this implementation use:
 - DOI Link: http://dx.doi.org/10.13140/RG.2.2.33274.98244
