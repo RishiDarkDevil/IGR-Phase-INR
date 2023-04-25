@@ -400,7 +400,8 @@ if __name__ == '__main__':
             is_continue=args.is_continue,
             timestamp=args.timestamp,
             checkpoint=args.checkpoint,
-            eval=args.eval
+            eval=args.eval,
+            debug=args.debug
     )
 
     trainrunner.run()
