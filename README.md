@@ -13,6 +13,18 @@ For more details:
 - [Implementation Paper](https://www.researchgate.net/publication/370214904_Implicit_Neural_Representation_with_PHASE_Implementation)
 - [Video](https://www.youtube.com/live/lmjpyIWIsZg?feature=share)
 
+* Changes are made on the IGR Codebase to incorporate phase only at the following files:
+  - `reconstruction/run.py`
+  - `reconstruction/setup.conf`
+  - `model/network.py`
+  - `utils/general.py`
+These changes are included within the following lines in each file:
+```python
+# PHASE IMPLEMENTATION: START
+...
+# PHASE IMPLEMENTATION: END
+```
+
 ## Installation Requirments
 The code is compatible with python 3.7 and pytorch 1.2. In addition, the following packages are required:  
 ```console
