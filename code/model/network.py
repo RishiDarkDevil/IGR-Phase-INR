@@ -24,14 +24,13 @@ class FourierFeatureMapping(nn.Module):
     """
     def __init__(
         self,
-        d_in, 
-        d_out,
         k
         ):
         super().__init__()
+        self.k = k
 
     def forward(self, x):
-        x_proj = torch.concatenate([(2.0**i) * np.pi * x for i in range(1, k+1)], axis=-1) # Projecting x
+        x_proj = torch.concatenate([(2.0**i) * np.pi * x for i in range(1, self.k+1)], axis=-1) # Projecting x
         # returning Fourier Features
         return torch.concatenate([torch.cos(x_proj), torch.sin(x_proj)], axis=-1)
 
@@ -50,10 +49,10 @@ class ImplicitNet(nn.Module):
         super().__init__()
 
         self.use_FFM = use_FFM
-        self.scale = scale
+        self.k = k
 
         if use_FFM:
-            self.FFM = FourierFeatureMapping(d_in, dims[0]//2, scale, k)
+            self.FFM = FourierFeatureMapping(k)
             dims = [2*k*d_in] + dims + [1]
         else:
             dims = [d_in] + dims + [1]
