@@ -78,8 +78,8 @@ class ReconstructionRunner:
 
             reconstruction_pred = self.network(ball_pts) # shape: (points_batch * pts_per_ball, 1)
             
-            # In case of debugging you may want to see the prediction of the network uncomment below line
-            # print('reconstruction', reconstruction_pred) #######
+            if self.print_grads:
+                print('preds at all ball points:', reconstruction_pred)
             
             reconstruction_pred = reconstruction_pred.view(cur_ball_pts.shape[0], cur_ball_pts.shape[1], -1) # shape: (points_batch, pts_per_ball, 1)
             # Monte-Carlo Estimation of the Integral for Reconstruction Loss
@@ -89,8 +89,8 @@ class ReconstructionRunner:
 
             WCH_pred = self.network(omega_pts) # shape: (n_points in omega, 1)
             
-            # In case of debugging you may want to see the prediction of the network uncomment below line
-            # print('WCH', WCH_pred) ########
+            if self.print_grads:
+                print('preds at all omega points', WCH_pred)
             
             grad = gradient(omega_pts, WCH_pred)
             W_u = WCH_pred ** 2 - 2 * torch.abs(WCH_pred) + 1
@@ -107,8 +107,8 @@ class ReconstructionRunner:
             if self.mu > 0.0:
                 u_x = self.network(cur_data[:, :self.d_in]).view(-1, 1) # shape: points_batch, 1
                 
-                # In case of debugging you may want to see the prediction of the network uncomment below line
-                # print('u_x', u_x) #########
+                if self.print_grads:
+                    print('preds at all input points in point cloud:', u_x)
                 
                 grad_w_x = (self.epsilon ** 0.5) * u_x # shape: points_batch, 1
                 if self.has_normals:
@@ -126,8 +126,8 @@ class ReconstructionRunner:
 
             loss.backward()
             
-            # In case of debugging uncomment the below line to check gradients
-            # print([mat.grad for mat in self.network.parameters()]) #########
+            if self.print_grads:
+                print('All gradients for the Network:', [mat.grad for mat in self.network.parameters()])
 
             self.optimizer.step()
 
@@ -237,6 +237,8 @@ class ReconstructionRunner:
         self.has_normals = self.conf.get_bool('network.has_normals') and (self.data.shape[-1] >= 6)
 
         # PHASE IMPLEMENTATION: END
+
+        self.print_grads = kwargs['debug']
 
         sigma_set = []
         ptree = cKDTree(self.data)
@@ -378,6 +380,7 @@ if __name__ == '__main__':
     parser.add_argument('--timestamp', default='latest', type=str)
     parser.add_argument('--checkpoint', default='latest', type=str)
     parser.add_argument('--eval', default=False, action="store_true")
+    parser.add_argument('--debug', default=False, action="store_true", help='Useful for debugging prints gradients and predictions of the network during training')
 
     args = parser.parse_args()
 
