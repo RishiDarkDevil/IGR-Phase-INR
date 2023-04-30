@@ -121,7 +121,7 @@ def chamfer_dist(mesh_x, mesh_y, sample_count=100000):
 
     print('Calculating one-sided Chamfer Distance from 2nd to 1st mesh...')
     # Y->X Chamfer Distance
-    chamfer_y_x = points_y_tree.query(points_x, k=1)[0]
+    chamfer_y_x = points_x_tree.query(points_y, k=1)[0]
     chamfer_y_x = np.mean(chamfer_y_x)
 
     print('Calculating double-sided Chamfer Distance')
